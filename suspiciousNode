@@ -1,0 +1,143 @@
+import java.io.*;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.Collectors; 
+
+class Solution {
+    
+    //white is yet to visit, gray is being vsited, red is suspicious, green is non suspicious
+     static int WHITE = 0, GRAY = 1, RED = 2, GREEN = 3;
+     static HashSet<Integer> suspicious = new HashSet();
+    
+    static class Graph  { 
+        int V; 
+        LinkedList<Integer>[] adjList; 
+        // Constructor  
+        Graph(int ver){ 
+            V = ver; 
+            adjList = new LinkedList[V+1]; 
+            
+            for (int i = 1; i <=V; i++) 
+                adjList[i] = new LinkedList<>(); 
+        } 
+    } 
+
+    // Utility function to add an edge  
+    static void addEdge(Graph g, int u, int v){ 
+        g.adjList[u].add(v); // Add v to u's list.  
+    } 
+
+    // Returns list of suspicious node in graph 
+   static String detectSuspicious(Graph g){
+       String result ;
+       
+        // Initialize color of all vertices as WHITE 
+        int[] color = new int[g.V]; 
+        for (int i = 1; i <= g.V; i++){ 
+            color[i-1] = WHITE; 
+        }
+        //first make all cycles with length 2 as suspicious and make it as red also put it in suspicious set
+        for(int i = 1; i <= g.V; i++){
+            if(color[i-1] == WHITE){
+                if(isCyclicSuspicious(g, i, color) == true){
+                    suspicious.add(i);
+                    color[i-1] = RED;
+                }
+            }
+        }
+        // now check seconf condition : If two or more users, which are considered suspicious, answer user C's question then user C is also considered suspicious.
+        for (int i = 1; i <= g.V; i++){ 
+            if (color[i-1] == WHITE){ 
+                if(DFSUtil(g, i, color) == true) { 
+                    suspicious.add(i);
+                    color[i-1]=RED;
+                }
+            }  
+        }String str = suspicious.stream().map(Object::toString).collect(Collectors.joining(","));
+        return str;
+    } 
+    
+    static boolean isCyclicSuspicious(Graph g, int u, int[] color){ 
+        int flag = 0;
+        for (Integer in : g.adjList[u]){ 
+            for(Integer inn : g.adjList[in]){
+                if (inn == u){
+                    flag=1;
+                    suspicious.add(in);
+                    color[in-1] = RED;
+                }
+            } 
+        }if(flag == 1){return true;}
+        else{return false;}
+    }
+
+    //Recursive function to find if there is back edge. in DFS subtree tree rooted with 'u' 
+    static boolean DFSUtil(Graph g, int u, int[] color){ 
+        
+            // GRAY : This vertex is being processed (DFS). for this vertex has started, but not. ended (or this vertex is in function call stack)  
+            color[u-1] = GRAY; // Iterate through all adjacent vertices 
+            int count = 0;
+            for (Integer in : g.adjList[u]){ 
+                
+                if (color[in-1] == RED){
+                    count++;
+                }// If v is not processed and there is a back. edge in subtree rooted with v  
+                else if (color[in-1] == WHITE && DFSUtil(g, in, color) == true) {
+                    color[in-1]=RED; 
+                    count++;
+                }
+                // System.out.println(  "i " + in + " color "+ color[in-1] + " count " + count);
+                if (count>=2){
+                    color[u-1]=RED; 
+                    suspicious.add(u);
+                    return true;
+                }
+            } 
+            // Mark this vertex as processed and non suspicious
+            color[u-1] = GREEN; 
+            return false; 
+    }
+
+    // You may change this function parameters
+    static String findSuspiciousUserId(int numOfQuestions, int[][] questionAndAnswerArrOfArr) {
+        // Participant's code will go here
+        //construct graph with the 2d array given 
+        Graph g = new Graph(questionAndAnswerArrOfArr.length); 
+        for(int i=0;i<questionAndAnswerArrOfArr.length; i++){
+            for(int j=1; j<questionAndAnswerArrOfArr[i].length;j++){
+                addEdge(g, questionAndAnswerArrOfArr[i][0], questionAndAnswerArrOfArr[i][j]); 
+            }
+        }
+        return detectSuspicious(g);
+        
+    }
+
+    private static final Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) throws IOException {
+        // Sample input:
+        // 3
+        // 1 2,2 1,3 1 2
+        String[] firstLine = scanner.nextLine().split(" ");
+        String secondLine = scanner.nextLine();
+        scanner.close();
+
+        int numOfQuestions = Integer.parseInt(firstLine[0]);
+        String[] questionAndAnswers = secondLine.split(",");
+        int[][] questionAndAnswerArrOfArr = parseQuestionAndAnswer(questionAndAnswers);
+
+        String result = findSuspiciousUserId(numOfQuestions, questionAndAnswerArrOfArr);
+        // Please do not remove the below line.
+        System.out.println(result);
+        // Do not print anything after this line
+    }
+
+    private static int[][] parseQuestionAndAnswer(String[] questionAndAnswers) {
+        return Arrays.stream(questionAndAnswers)
+                .map(questionAndAnswer -> {
+                    String[] questionAndAnswerArr = questionAndAnswer.split(" ");
+                    return Stream.of(questionAndAnswerArr).mapToInt(Integer::parseInt).toArray();
+                })
+                .toArray(int[][]::new);
+    }
+}
